@@ -1,0 +1,31 @@
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+
+# Local data and generated artifacts
+data/private/
+data/raw/
+data/generated/
+work/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Web
+node_modules/
+.next/
+dist/
+playwright-report/
+test-results/
+
+# OS
+.DS_Store
+Thumbs.db
