@@ -2,14 +2,16 @@
 
 **AI Studio Operating System**
 
-NOVA INK Studios의 운영을 지원하는 AI 스튜디오 운영 제품입니다.
+**가상의 웹툰 스튜디오 NOVA INK Studios를 배경으로, 멀티 에이전트 오케스트레이션을 실험·평가하기 위해 설계한 프로젝트입니다.**
 
-**One human operator runs an AI-native webtoon studio.**
+에이전트의 역할 분담, 작업 의존성, 결과 검증, 선택적 재작업, 사람의 승인과 장애 복구를 하나의 시나리오에서 검증하는 것이 목적입니다. 실제 회사의 운영 서비스가 아닙니다.
+
+**A fictional studio. A testbed for multi-agent orchestration.**
 
 웹툰 도메인을 아는 운영자 한 명이 AI 팀에 일을 맡기고, 근거를 검토하고, 필요한 작업만 다시 수행하게 만드는 스튜디오 운영 콘솔.
 
-> **Design proposal · v0.1 · 2026-09-27**
-> 현재는 설계 문서만 있는 프로젝트입니다. 실행 가능한 제품, 측정된 성능, 실제 고객 데이터는 포함하지 않습니다. 브랜드 이름의 사용 가능성은 검증하지 않았습니다.
+> **Design & repository scaffold · v0.2 · 2026-09-28**
+> 현재는 설계 문서와 폴더 안내, 환경변수 예시만 있는 프로젝트입니다. 실행 가능한 제품, 측정된 성능, 실제 고객 데이터는 포함하지 않습니다. 브랜드 이름의 사용 가능성은 검증하지 않았습니다.
 
 ## 회사와 제품
 
@@ -75,7 +77,54 @@ flowchart TD
 | Agent Lab | 같은 과제에서 어떤 에이전트 설정이 더 나은가? |
 | Audit | 어떤 입력과 버전으로 이 결과가 만들어졌는가? |
 
+## 제안 기술 스택
+
+아래는 구현 예정안입니다. 아직 설치·연결·실행되지 않았으며 버전과 모델은 구현 시 검증 후 고정합니다.
+
+| 영역 | 기술 | 이 프로젝트에서의 용도 |
+| --- | --- | --- |
+| 운영 화면 | Next.js, React, TypeScript | Studio, Missions, Agent Lab UI |
+| 스타일 | Tailwind CSS | 상태 카드와 검토 패널의 일관된 스타일 |
+| 그래프 | React Flow | 조직도와 작업 의존성 시각화 |
+| API | Python, FastAPI, Pydantic | 미션·승인 API와 입력·출력 구조 검증 |
+| 오케스트레이션 | LangGraph | 상태 기반 역할 실행, 분기, 중단·재개 |
+| 저장소 | PostgreSQL | 미션, 산출물 버전, 승인, 감사 이벤트, 체크포인트 |
+| DB 접근 | SQLAlchemy, Alembic | 업무 데이터 접근과 스키마 변경 관리 |
+| 실시간 상태 | SSE | 서버에서 UI로 작업 이벤트 전달 |
+| 모델 | 제공자별 어댑터 + mock | 초기에는 모의 응답, 이후 선정한 모델로 비교 실험 |
+| 검증 | pytest, Playwright | 상태·권한·복구 검증과 UI 흐름 검증 |
+| 로컬 환경 | Docker Compose | 향후 DB·API·실행기·UI 개발 환경 구성 |
+
+LangGraph는 실행 흐름을 담당하고, FastAPI는 사용자 요청과 권한을 담당합니다. 모델의 출력 구조가 맞는지는 Pydantic으로 검증하되, 내용의 정확성은 근거 검사와 평가로 별도 검증합니다. PostgreSQL의 업무 레코드와 LangGraph 체크포인트는 논리적으로 분리합니다.
+
+처음에는 Redis, 별도 벡터 DB, 여러 오케스트레이션 프레임워크를 함께 도입하지 않습니다. 실행 관측은 DB 이벤트부터 시작하고 외부 추적 서비스는 필요할 때 검토합니다.
+
+참고: [Next.js](https://nextjs.org/docs), [FastAPI](https://fastapi.tiangolo.com/), [LangGraph](https://docs.langchain.com/oss/python/langgraph/overview), [React Flow](https://reactflow.dev/).
+
+## 저장소 구성
+
+```text
+orbit-studio-os/
+├── data/
+│   └── README.md          # 합성 입력·평가 데이터의 구성 방침
+├── docs/                  # 제품, UX, 실행 계약, 평가, 로드맵
+├── src/
+│   └── README.md          # 향후 소스 모듈의 경계와 배치 계획
+├── .env.example           # 실제 비밀값이 없는 환경변수 설계 예시
+├── .gitignore
+├── README.md
+└── architecture.md        # 전체 구조와 기술 선택의 진입 문서
+```
+
+현재 data/에는 데이터셋이, src/에는 실행 코드가 아직 없습니다. README는 기존 파일명인 `README.md`를 사용하고 환경변수 예시는 공백 없이 `.env.example`로 둡니다.
+
+## 실행 상태
+
+아직 실행 명령은 제공하지 않습니다. .env.example은 설정 계약 초안이며 읽는 프로그램이 없습니다. 의존성 파일, 실제 API 연결, 테스트 코드와 Docker Compose 파일은 구현 단계에서 추가합니다. 초기 실행은 mock부터 시작하고 실제 모델 연결과 비용을 별도로 확인합니다.
+
 ## 설계 문서
+
+- [전체 아키텍처와 기술 스택](architecture.md)
 
 - [제품 범위와 성공 기준](docs/01-product.md)
 - [화면 구조와 시연 시나리오](docs/02-experience.md)
