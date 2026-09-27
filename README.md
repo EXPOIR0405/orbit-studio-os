@@ -36,13 +36,25 @@ AI에게 원고 검토와 홍보 문안 작성을 각각 시킬 수는 있습니
 
 이 프로젝트의 가설은 **역할별 작업, 버전이 있는 산출물, 근거, 승인, 재작업을 하나의 흐름으로 묶으면 운영자의 검토 부담을 줄일 수 있다**는 것입니다. 에이전트 수 자체는 성과 지표가 아닙니다. 단일 에이전트와 고정 워크플로보다 이점이 없으면 구조를 단순화합니다.
 
+## 스튜디오 역할
+
+| 에이전트 | 화면에서의 역할 | 책임 |
+| --- | --- | --- |
+| Milo | 총괄 PD | 계획·작업 배분·일정·재작업 조율 |
+| Story Writer & Editor | 글작가·스토리 편집 | 설정 검토와 지정 장면의 대사·수정 원고 초안 |
+| Audience Analyst | 독자 분석 담당 | 합성 독자 반응 분석 |
+| Campaign Planner | 마케팅 담당 | 홍보 문안 기획 |
+| QA | 최종 검수 담당 | 근거·설정·스포일러 검수 |
+
+첫 버전은 글작가와 편집 역할을 하나로 묶고 QA가 별도로 검수합니다. 기존 원고를 입력으로 받아 필요한 장면의 수정 초안을 제안하며, 회차 전체를 처음부터 자동 집필하는 기능은 후속 범위입니다. 원고와 설정집 원본은 덮어쓰지 않고 초안을 별도 산출물로 저장합니다. Milo와 QA에는 최종 승인권이 없으며 사람이 결정합니다.
+
 ## 첫 번째 미션
 
 가상 작품 《별빛식당》 EP.12의 공개 준비 패키지를 만든다.
 
 1. 운영자가 원고·작품 설정집·가상 독자 반응과 목표를 등록한다.
-2. Milo가 작업 계획을 제시하고 운영자가 범위와 비용 상한을 확정한다.
-3. Story Editor가 설정 일관성을, Audience Analyst가 독자 반응을 검토한다.
+2. 총괄 PD Milo가 작업 계획을 제시하고 운영자가 범위와 비용 상한을 확정한다.
+3. Story Writer & Editor가 설정 일관성과 필요한 수정 초안을, Audience Analyst가 독자 반응을 검토한다.
 4. Campaign Planner가 두 결과를 받아 스포일러 없는 홍보 문안을 작성한다.
 5. QA가 근거 누락과 충돌을 검사한다. 실패한 산출물과 그에 의존하는 작업만 다시 수행한다.
 6. 운영자가 변경 전후와 근거를 확인하고 공개 준비 패키지를 승인한다.
@@ -52,8 +64,8 @@ AI에게 원고 검토와 홍보 문안 작성을 각각 시킬 수는 있습니
 ```mermaid
 flowchart TD
     CEO[CEO: 목표와 정책] --> OP[Human AI Operator]
-    OP --> M[Milo: 계획과 조정]
-    M --> S[Story Editor]
+    OP --> M[Milo: 총괄 PD]
+    M --> S[글작가 및 스토리 편집]
     M --> A[Audience Analyst]
     S --> C[Campaign Planner]
     A --> C
@@ -88,7 +100,7 @@ flowchart TD
 | 그래프 | React Flow | 조직도와 작업 의존성 시각화 |
 | API | Python, FastAPI, Pydantic | 미션·승인 API와 입력·출력 구조 검증 |
 | 오케스트레이션 | LangGraph | 상태 기반 역할 실행, 분기, 중단·재개 |
-| 저장소 | PostgreSQL | 미션, 산출물 버전, 승인, 감사 이벤트, 체크포인트 |
+| 저장소 | PostgreSQL — 로컬 개발 / Supabase Free 데모 | 미션, 산출물 버전, 승인, 감사 이벤트, 체크포인트 |
 | DB 접근 | SQLAlchemy, Alembic | 업무 데이터 접근과 스키마 변경 관리 |
 | 실시간 상태 | SSE | 서버에서 UI로 작업 이벤트 전달 |
 | 모델 | 제공자별 어댑터 + mock | 초기에는 모의 응답, 이후 선정한 모델로 비교 실험 |
@@ -100,6 +112,12 @@ LangGraph는 실행 흐름을 담당하고, FastAPI는 사용자 요청과 권�
 처음에는 Redis, 별도 벡터 DB, 여러 오케스트레이션 프레임워크를 함께 도입하지 않습니다. 실행 관측은 DB 이벤트부터 시작하고 외부 추적 서비스는 필요할 때 검토합니다.
 
 참고: [Next.js](https://nextjs.org/docs), [FastAPI](https://fastapi.tiangolo.com/), [LangGraph](https://docs.langchain.com/oss/python/langgraph/overview), [React Flow](https://reactflow.dev/).
+
+## DB 운영과 비용
+
+개발은 로컬 PostgreSQL, 공개 데모는 Supabase Free의 PostgreSQL을 사용하는 계획입니다. PostgreSQL 자체는 무료 오픈소스이며 Supabase는 이를 호스팅하는 서비스입니다. DB 엔진과 업무 스키마를 유지하고 환경별 연결 설정을 바꿉니다.
+
+Supabase Free의 용량·프로젝트 수·비활성 일시정지 제한은 [공식 요금표](https://supabase.com/pricing)를 배포 시 다시 확인합니다. 실행 로그와 체크포인트의 보존량을 관리하고, 데모 전 DB 가용성을 확인합니다. 무료 한도 초과 시 자동 유료 전환을 전제로 하지 않습니다. 실제 모델 API와 API·worker 호스팅 비용은 별도입니다. 아직 클라우드 프로젝트를 생성하거나 연결하지 않았습니다.
 
 ## 저장소 구성
 

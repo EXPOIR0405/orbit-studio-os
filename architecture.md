@@ -38,6 +38,16 @@ API는 미션 생성·권한·승인을, 별도 실행기 프로세스는 장시
 
 기술별 버전은 구현 시 호환성 검증 후 잠금 파일에 기록한다. Redis/Celery, 벡터 DB, 외부 관측 플랫폼은 현재 필수 구성에 포함하지 않는다.
 
+## DB 환경
+
+개발: 로컬 PostgreSQL. 공개 데모: Supabase Free의 PostgreSQL. 양쪽에 같은 업무 마이그레이션을 적용하며 DATABASE_URL은 서버에서만 읽는다. Supabase를 별도의 DB 엔진으로 취급하지 않는다.
+
+API와 worker만 DB에 연결한다. 브라우저는 FastAPI를 통해 접근하며 DB 연결 문자열을 전달받지 않는다. Supabase Auth·Storage·Realtime은 이번 결정에 포함하지 않는다. 업무 테이블과 체크포인트는 공개 Data API에 노출되지 않는 서버 전용 영역에 둔다.
+
+구현 시 연결 방식·TLS·네트워크 접근·드라이버·체크포인터 호환성을 검증한다. 마이그레이션과 장시간 worker에 맞는 연결 방식을 선택하고 연결 풀의 동시성을 제한한다. 무료 플랜 일시정지 시 실행을 실패/대기로 표시하고, 복구 후 유효한 체크포인트에서 재개한다.
+
+무료 플랜의 제약은 [공식 요금표](https://supabase.com/pricing)를 배포 시 재확인한다. 감사 이력과 참조 중인 산출물을 보존하면서 불필요한 로그·오래된 체크포인트를 정리하는 정책을 구현한다. API·worker 호스팅과 실제 모델 사용료는 DB 무료 플랜과 별개다. 현재는 운영 계획만 있으며 클라우드 자원을 생성하지 않았다.
+
 ## 소스와 데이터 배치
 
 현재 실제 구조는 루트 [README](README.md)를 따른다. 향후 src/web/에는 Next.js 앱을, src/backend/orbit/에는 api, orchestration, agents, tools, storage, evaluation 모듈을 둘 예정이다. 구체적인 패키지 파일과 테스트 디렉터리는 구현할 때 만든다.
