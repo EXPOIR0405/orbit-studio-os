@@ -1,19 +1,14 @@
-# Source layout
+# Source
 
-현재 실행 코드는 없다. 아래는 구현 시 만들 모듈의 계획이다.
+- backend/orbit/api.py: 로컬 FastAPI와 SSE, 미션·승인 API.
+- backend/orbit/service.py: LangGraph 실행, 산출물 버전, 재작업과 승인.
+- backend/orbit/routing.py: 설명 가능한 규칙 라우팅.
+- backend/orbit/tools.py: 역할별 읽기 전용 도구와 입력 검증.
+- backend/orbit/memory.py: 같은 작품의 승인 결과 검색.
+- backend/orbit/evaluation.py: 구조·근거 평가.
+- backend/orbit/provider.py: mock과 잠긴 OpenAI function-calling 경로.
+- backend/orbit/storage.py: SQLAlchemy 저장.
+- web/: Next.js 운영 화면, 조직 그래프, 감사 기록.
 
-| 예정 경로 | 책임 |
-| --- | --- |
-| web/ | Next.js 운영 콘솔, React Flow 그래프, SSE 구독 |
-| backend/orbit/api/ | FastAPI 라우트, 인증·권한, 입력 검증 |
-| backend/orbit/orchestration/ | LangGraph 상태, 계획 검증, worker, 재작업 |
-| backend/orbit/agents/ | 역할별 지시문과 버전이 고정된 설정 |
-| backend/orbit/tools/ | 자료 조회, 모델 어댑터, 도구 허용 목록 |
-| backend/orbit/storage/ | 업무 레코드, 체크포인트 연동, 이벤트 |
-| backend/orbit/evaluation/ | 단일·고정·멀티 비교 실험과 지표 집계 |
-
-모델 키와 실행 권한은 서버에서만 사용한다. UI 상태를 승인 근거로 신뢰하지 않는다. 실제 구현 순서는 mock → 단일 에이전트 기준선 → 역할 분리 → 복구·승인 → 비교 평가다.
-
-루트 .env.example은 환경변수 설계 초안이다. 현재 로더가 없으며, 구현 시 backend가 루트 .env를 명시적으로 읽도록 정하고 frontend에는 공개 설정만 전달한다. .env 전체를 클라이언트 번들로 넘기지 않는다.
-
-[전체 아키텍처](../architecture.md) · [상세 실행 계약](../docs/03-architecture.md).
+루트 .env를 서버만 읽는다. 실제 호출은 ORBIT_ENABLE_LIVE=false로 차단된다.
+[현재 상태와 한계](../docs/07-implementation-status.md)를 참고한다.

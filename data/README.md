@@ -1,6 +1,6 @@
 # Data
 
-현재 데이터셋은 없으며 합성 자료를 작성하기 위한 설계만 있다. NOVA INK Studios와 작품은 가상이다.
+현재 episode-12.json에 설정집·원고·합성 댓글 fixture가 있다. 학습용/최종 평가용 데이터셋 전체는 아직 작성하지 않았다. NOVA INK Studios와 작품은 가상이다.
 
 ## 예정 자료
 

@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: orbit
+      POSTGRES_PASSWORD: ${ORBIT_DB_PASSWORD:?Set a local database password}
+      POSTGRES_DB: orbit
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - orbit_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orbit"]
+      interval: 5s
+      retries: 10
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://orbit:${ORBIT_DB_PASSWORD}@db:5432/orbit
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ORBIT_MODEL_ID: ${ORBIT_MODEL_ID:-gpt-4.1-mini}
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  orbit_db:
