@@ -1,0 +1,9 @@
+[project]
+name = "orbit-studio-os"
+version = "0.3.0"
+requires-python = ">=3.11"
+dependencies = ["fastapi", "uvicorn", "sqlalchemy", "psycopg[binary]", "langgraph", "openai", "python-dotenv"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src/backend"]
+testpaths = ["tests"]

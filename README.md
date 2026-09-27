@@ -10,8 +10,8 @@
 
 웹툰 도메인을 아는 운영자 한 명이 AI 팀에 일을 맡기고, 근거를 검토하고, 필요한 작업만 다시 수행하게 만드는 스튜디오 운영 콘솔.
 
-> **Design & repository scaffold · v0.2 · 2026-09-28**
-> 현재는 설계 문서와 폴더 안내, 환경변수 예시만 있는 프로젝트입니다. 실행 가능한 제품, 측정된 성능, 실제 고객 데이터는 포함하지 않습니다. 브랜드 이름의 사용 가능성은 검증하지 않았습니다.
+> **Local prototype · v0.3 · 2026-09-28**
+> 현재는 합성 데이터로 실행 가능한 로컬 프로토타입입니다. 실제 모델 호출은 기본 비활성화되어 있으며, 모델 성능이나 실제 회사 운영 실적을 주장하지 않습니다. 현재 구현 범위는 [구현 상태](docs/07-implementation-status.md)를 우선 참고하세요. 브랜드 이름의 사용 가능성은 검증하지 않았습니다.
 
 ## 회사와 제품
 
@@ -91,7 +91,7 @@ flowchart TD
 
 ## 제안 기술 스택
 
-아래는 구현 예정안입니다. 아직 설치·연결·실행되지 않았으며 버전과 모델은 구현 시 검증 후 고정합니다.
+아래 표는 전체 설계의 기술 선택입니다. 현재는 Next.js·React·TypeScript·React Flow, FastAPI·Pydantic·SQLAlchemy, LangGraph와 mock 실행을 구현했습니다. Tailwind 대신 일반 CSS를 사용하며 Alembic과 PostgreSQL/Supabase 통합 검증은 후속입니다. 설치 버전은 requirements.txt와 package-lock.json에 고정했습니다.
 
 | 영역 | 기술 | 이 프로젝트에서의 용도 |
 | --- | --- | --- |
@@ -124,21 +124,53 @@ Supabase Free의 용량·프로젝트 수·비활성 일시정지 제한은 [공
 ```text
 orbit-studio-os/
 ├── data/
-│   └── README.md          # 합성 입력·평가 데이터의 구성 방침
+│   └── README.md          # 합성 EP.12 자료와 데이터 방침
 ├── docs/                  # 제품, UX, 실행 계약, 평가, 로드맵
 ├── src/
-│   └── README.md          # 향후 소스 모듈의 경계와 배치 계획
+│   └── README.md          # backend/ 실행 로직 · web/ 운영 화면
 ├── .env.example           # 실제 비밀값이 없는 환경변수 설계 예시
 ├── .gitignore
 ├── README.md
 └── architecture.md        # 전체 구조와 기술 선택의 진입 문서
 ```
 
-현재 data/에는 데이터셋이, src/에는 실행 코드가 아직 없습니다. README는 기존 파일명인 `README.md`를 사용하고 환경변수 예시는 공백 없이 `.env.example`로 둡니다.
+현재 data/episode-12.json에는 합성 자료가, src/backend/와 src/web/에는 API·실행 로직·화면이 있습니다. README는 기존 파일명인 `README.md`를 사용하고 환경변수 예시는 공백 없이 `.env.example`로 둡니다.
 
-## 실행 상태
+## 로컬 실행
 
-아직 실행 명령은 제공하지 않습니다. .env.example은 설정 계약 초안이며 읽는 프로그램이 없습니다. 의존성 파일, 실제 API 연결, 테스트 코드와 Docker Compose 파일은 구현 단계에서 추가합니다. 초기 실행은 mock부터 시작하고 실제 모델 연결과 비용을 별도로 확인합니다.
+**실제 모델 호출은 꺼져 있습니다.** 키가 있어도 자동 호출하지 않습니다. 도구·라우팅·상태·기억·평가·추적을 먼저 mock으로 검증하며, live 테스트는 사용자 승인 후 별도로 진행합니다.
+
+Python 3.11+와 Node.js 20.9+가 필요합니다. 아래는 Windows PowerShell 기준입니다.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn orbit.api:app --app-dir src/backend --host 127.0.0.1 --port 8000 --workers 1
+```
+
+다른 터미널에서:
+
+```powershell
+cd src/web
+npm ci
+npm run dev
+```
+
+[로컬 화면](http://127.0.0.1:3000)을 열어 새 미션 → 작업 범위 → 모의 응답 → 실행 → 결과 검토 → 수정 요청 또는 승인 → 패키지 내보내기를 진행합니다. Audit에서 도구·평가·호출 기록을 확인합니다.
+
+DATABASE_URL이 없으면 work/studio.db의 SQLite를 사용하고 화면에 sqlite로 표시합니다. PostgreSQL은 compose.yaml의 로컬 DB/API 구성으로 실행할 수 있으나 현재 환경에서는 검증하지 않았습니다. Supabase Free 연결, 인증과 외부 배포도 아직 하지 않았습니다. **API와 UI는 로컬 전용이며 인터넷에 공개하지 마세요.**
+
+.env는 Git에서 제외되며 기존 파일을 덮어쓰지 않습니다. .env.example은 비밀값 없는 설정 설명입니다. 현재 worker는 API 내 단일 작업 루프이므로 반드시 workers=1로 실행합니다.
+
+## 검증
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+cd src/web
+npm run build
+```
+
+테스트는 별도 임시 DB와 mock을 사용하고 live 호출을 차단합니다. Playwright 시나리오는 src/web/tests/에 있으며 API/UI를 실행한 후 로컬 테스트 환경에서 사용할 수 있습니다. 실행 검증 결과와 한계는 [구현 상태](docs/07-implementation-status.md)에 기록합니다.
 
 ## 설계 문서
 

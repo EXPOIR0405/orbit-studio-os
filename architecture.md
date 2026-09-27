@@ -1,6 +1,6 @@
 # ORBIT Architecture
 
-> 설계안 · 2026-09-28. 구현 전이며 NOVA INK Studios는 실험을 위한 가상의 회사다.
+> 설계 목표 · 2026-09-28. NOVA INK Studios는 가상의 회사다. 현재 v0.3 구현과 차이는 [구현 상태](docs/07-implementation-status.md)를 우선 참고한다. 현재는 API 내 단일 worker, 규칙 라우팅, SQLite 로컬 검증이며 전체 설계가 완료된 것은 아니다.
 
 ## 목적
 
