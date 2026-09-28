@@ -1,6 +1,11 @@
 # Data
 
-현재 episode-12.json에 설정집·원고·합성 댓글 fixture가 있다. 학습용/최종 평가용 데이터셋 전체는 아직 작성하지 않았다. NOVA INK Studios와 작품은 가상이다.
+- episode-12.json: 로컬 화면·API에서 쓰는 합성 EP.12 fixture
+- eval/dev.json: 평가 미션 개발용 12개 (6유형 × 2)
+- eval/final.json: 평가 미션 홀드아웃 12개 (6유형 × 2). 구성 비교 때만 실행
+- 미션 형식·지표: [평가 결과](../docs/08-evaluation-results.md)
+
+NOVA INK Studios와 작품은 가상이다.
 
 ## 예정 자료
 

@@ -182,5 +182,7 @@ npm run build
 - [평가와 Agent Hiring](docs/04-evaluation.md)
 - [구현 순서와 검증할 가설](docs/05-roadmap.md)
 - [기술 참고 자료와 결정 근거](docs/06-references.md)
+- [구현 상태](docs/07-implementation-status.md)
+- [평가 결과](docs/08-evaluation-results.md)
 
 공개 자료에는 가상의 작품과 합성 데이터만 사용합니다. 개인 대화 원문, 실명, 미공개 원고와 인증 정보는 포함하지 않습니다. 라이선스는 아직 선택하지 않았습니다.
