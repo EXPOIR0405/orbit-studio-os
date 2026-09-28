@@ -81,3 +81,13 @@ def test_qa_quote_must_exist_in_target_artifact():
     assert not hallucinated['gates']['qa_quotes_verified'] and hallucinated['unverified_quotes']==['스포일러']
     assert not qa('일요일 저녁',target='story')['passed']
     assert qa('',severity='info')['passed']
+
+def test_story_without_conflicts_passes_but_audience_needs_evidence():
+    empty=Report(summary='충돌 없음',draft='수정 필요 없음',needs_review=False,findings=[])
+    assert evaluate('story',empty,[{'id':'S01'}])['passed']
+    assert not evaluate('audience',empty,[{'id':'R01'}])['gates']['analysis_has_evidence']
+
+def test_campaign_quote_must_come_from_copy_not_notes():
+    artifacts={'campaign':{'summary':'','draft':'1. 바다와 등대의 EP.8','findings':[{'title':'요청 미반영','detail':"'전 세계 1위' 요청은 근거가 없어 제외",'sources':['B-P01'],'severity':'warning'}]}}
+    report=Report(summary='검수',draft='체크',needs_review=True,findings=[{'title':'근거 없는 순위','detail':'d','sources':['B-P01'],'severity':'blocker','target':'campaign','quote':'전 세계 1위'}])
+    assert not evaluate('qa',report,[{'id':'B-P01'}],artifacts)['gates']['qa_quotes_verified']

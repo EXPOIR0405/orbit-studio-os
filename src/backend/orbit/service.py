@@ -11,7 +11,7 @@ from .models import NewMission
 from .provider import generate, repair, live_enabled
 from .routing import route
 from .tools import ToolBox
-from .evaluation import evaluate
+from .evaluation import evaluate, downgrade_unverified
 
 ROLES = ["pd", "story", "audience", "campaign", "qa"]
 
@@ -165,6 +165,10 @@ def run_role(mid, role):
             failed=[g for g,ok in evaluation["gates"].items() if not ok]
             report=repair(role,context,m["mode"],report,failed,reserve,record_usage)
             evaluation={**evaluate(role,report,context["sources"],context["previous_results"]),"repaired_from":failed}
+            still=[g for g,ok in evaluation["gates"].items() if not ok]
+            if still==["qa_quotes_verified"]:
+                report,downgraded=downgrade_unverified(report,context["previous_results"])
+                evaluation={**evaluate(role,report,context["sources"],context["previous_results"]),"repaired_from":failed,"downgraded":downgraded}
         with db.lock:
             current=db.get(mid)
             trace=next(t for t in current["traces"] if t["id"]==trace_id)
