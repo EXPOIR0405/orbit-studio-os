@@ -127,3 +127,26 @@ def test_failed_repair_fails_mission(monkeypatch):
         m=complete(c,m)
         assert m["status"]=="failed" and "campaign" not in m["artifacts"]
         assert next(t for t in m["traces"] if t["role"]=="campaign")["status"]=="failed"
+
+def test_unverified_qa_quotes_are_lowered_not_failed(monkeypatch):
+    from orbit.models import Report, Finding
+    actual=service.generate
+    def ghost(role,context,mode,tools,on_request,on_usage):
+        report=actual(role,context,mode,tools,on_request,on_usage)
+        if role=="qa":
+            return Report(summary=report.summary,draft=report.draft,needs_review=True,
+                          findings=[Finding(title="없는 문장",detail="d",sources=["S04"],severity="blocker",target="campaign",quote="산출물에 없는 문장")])
+        return report
+    with TestClient(app) as c:
+        m=mission(c)
+        monkeypatch.setattr(service,"generate",ghost)
+        monkeypatch.setattr(service,"repair",lambda role,context,mode,report,failed,on_request,on_usage:(on_request("repair"),report)[1])
+        m=complete(c,m)
+        assert m["status"]=="review_required"
+        qa=m["artifacts"]["qa"]["report"]
+        # blocker는 warning으로만 낮춤 — 승인은 가능하지만 운영자에게 경고로 보임
+        assert qa["findings"][0]["severity"]=="warning" and qa["findings"][0]["title"].startswith("[인용 확인 불가]")
+        assert qa["needs_review"]
+        trace=next(t for t in m["traces"] if t["role"]=="qa")
+        assert trace["evaluation"]["downgraded"]==["없는 문장"] and trace["evaluation"]["passed"]
+        assert c.post(f"/missions/{m['id']}/approvals",json={"version":1,"package_hash":m["package_hash"]}).status_code==200
