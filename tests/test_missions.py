@@ -128,7 +128,7 @@ def test_failed_repair_fails_mission(monkeypatch):
         assert m["status"]=="failed" and "campaign" not in m["artifacts"]
         assert next(t for t in m["traces"] if t["role"]=="campaign")["status"]=="failed"
 
-def test_unverified_qa_quotes_are_downgraded_not_failed(monkeypatch):
+def test_unverified_qa_quotes_are_lowered_not_failed(monkeypatch):
     from orbit.models import Report, Finding
     actual=service.generate
     def ghost(role,context,mode,tools,on_request,on_usage):
@@ -144,8 +144,9 @@ def test_unverified_qa_quotes_are_downgraded_not_failed(monkeypatch):
         m=complete(c,m)
         assert m["status"]=="review_required"
         qa=m["artifacts"]["qa"]["report"]
-        assert qa["findings"][0]["severity"]=="info" and qa["findings"][0]["title"].startswith("[인용 확인 불가]")
-        assert not qa["needs_review"]
+        # blocker는 warning으로만 낮춤 — 승인은 가능하지만 운영자에게 경고로 보임
+        assert qa["findings"][0]["severity"]=="warning" and qa["findings"][0]["title"].startswith("[인용 확인 불가]")
+        assert qa["needs_review"]
         trace=next(t for t in m["traces"] if t["role"]=="qa")
         assert trace["evaluation"]["downgraded"]==["없는 문장"] and trace["evaluation"]["passed"]
         assert c.post(f"/missions/{m['id']}/approvals",json={"version":1,"package_hash":m["package_hash"]}).status_code==200

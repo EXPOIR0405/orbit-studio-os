@@ -91,3 +91,18 @@ def test_campaign_quote_must_come_from_copy_not_notes():
     artifacts={'campaign':{'summary':'','draft':'1. 바다와 등대의 EP.8','findings':[{'title':'요청 미반영','detail':"'전 세계 1위' 요청은 근거가 없어 제외",'sources':['B-P01'],'severity':'warning'}]}}
     report=Report(summary='검수',draft='체크',needs_review=True,findings=[{'title':'근거 없는 순위','detail':'d','sources':['B-P01'],'severity':'blocker','target':'campaign','quote':'전 세계 1위'}])
     assert not evaluate('qa',report,[{'id':'B-P01'}],artifacts)['gates']['qa_quotes_verified']
+
+def test_downgrade_keeps_verified_finding_with_same_title():
+    from orbit.evaluation import downgrade_unverified
+    artifacts={'campaign':{'summary':'','draft':'1. 마지막 손님은 스승이었다','findings':[]}}
+    real={'title':'스포일러','detail':'d','sources':['S06'],'severity':'blocker','target':'campaign','quote':'마지막 손님은 스승이었다'}
+    ghost={**real,'quote':'산출물에 없는 문장'}
+    report=Report(summary='검수',draft='체크',needs_review=True,findings=[real,ghost])
+    fixed,downgraded=downgrade_unverified(report,artifacts)
+    assert [f.severity for f in fixed.findings]==['blocker','warning']
+    assert fixed.needs_review and downgraded==['스포일러']
+
+def test_quote_tolerates_punctuation_differences():
+    artifacts={'campaign':{'summary':'','draft':'1. 그날 밤… 스승이 돌아왔다!','findings':[]}}
+    report=Report(summary='검수',draft='체크',needs_review=True,findings=[{'title':'스포일러','detail':'d','sources':['S06'],'severity':'blocker','target':'campaign','quote':'그날 밤... 스승이 돌아왔다'}])
+    assert evaluate('qa',report,[{'id':'S06'}],artifacts)['gates']['qa_quotes_verified']
