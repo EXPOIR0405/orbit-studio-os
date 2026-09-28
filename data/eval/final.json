@@ -169,7 +169,7 @@
         {"id": "R02", "type": "feedback", "text": "지유 우승 기원!"},
         {"id": "R03", "type": "feedback", "text": "은채도 응원해요."}
       ],
-      "expected": {"conflicts": [], "unsupported_scenes": [], "spoiler_phrases": ["준우승", "은채의 승리"], "forbidden_phrases": ["우승!"]}
+      "expected": {"conflicts": [], "unsupported_scenes": [], "spoiler_phrases": ["준우승", "은채의 승리"], "forbidden_phrases": ["우승!", "드디어 우승", "우승 확정", "우승했", "우승을 차지", "우승 트로피"]}
     },
     {
       "id": "campaign-04",

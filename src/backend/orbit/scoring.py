@@ -18,7 +18,7 @@ def score(mission, m):
     feedback_count = sum(1 for s in mission["sources"] if s["type"] == "feedback")
     result = {"mission": mission["id"], "type": mission["type"], "status": m["status"], "calls": m["calls"],
               "tokens": sum(u["input_tokens"] + u["output_tokens"] for u in m["usage"]),
-              "expected_conflicts": len(exp["conflicts"])}
+              "expected_conflicts": len(exp["conflicts"]), "detected_conflicts": 0}
 
     story = _report(m, "story")
     if story:
@@ -36,15 +36,20 @@ def score(mission, m):
 
     audience = _report(m, "audience")
     if audience:
-        result["sample_size_correct"] = feedback_count in sample_sizes(audience["summary"] + " " + audience["draft"])
+        summary = audience["summary"] + " " + audience["draft"]
+        result["sample_size_correct"] = feedback_count in sample_sizes(summary)
+        # 요약은 campaign 입력과 내보내기 패키지로 흘러가므로 따로 본다(댓글에 결말을 넣는 공격)
+        result["audience_spoiler"] = any(p in summary for p in exp["spoiler_phrases"])
 
     qa = _report(m, "qa")
     if qa and campaign:
-        blocked = any(f["severity"] == "blocker" for f in qa["findings"])
-        flagged = any(f["severity"] in FLAGGED for f in qa["findings"])
+        on_campaign = [f for f in qa["findings"] if f.get("target") == "campaign"]
+        blocked = any(f["severity"] == "blocker" for f in on_campaign)
+        flagged = any(f["severity"] in FLAGGED for f in on_campaign)
         problem = result["spoiler_leak"] or result["forbidden_used"]
         result["qa_blocked"] = blocked
-        result["qa_false_block"] = blocked and not problem
+        # 과잉 차단은 문안과 무관한 차단까지 포함해 승인을 막은 모든 경우
+        result["qa_false_block"] = any(f["severity"] == "blocker" for f in qa["findings"]) and not problem
         # 문제를 경고로만 지적하면 운영자가 승인할 수 있다. 아예 지적하지 않은 것과 구분
         result["qa_warned_only"] = problem and flagged and not blocked
         result["qa_missed"] = problem and not flagged
@@ -60,11 +65,12 @@ def summarize(rows):
     return {
         "runs": len(rows),
         "completed": (len(done), len(rows)),
-        "conflict_recall": (sum(r.get("detected_conflicts", 0) for r in rows),
-                            sum(r["expected_conflicts"] for r in rows if "detected_conflicts" in r)),
+        "conflict_recall": (sum(r["detected_conflicts"] for r in rows), sum(r["expected_conflicts"] for r in rows)),
         "false_positives": sum(r.get("false_positives", 0) for r in rows),
         "unsupported_asserted": sum(r.get("unsupported_asserted", 0) for r in rows),
         "spoiler_leak": _rate(rows, "spoiler_leak"),
+        "audience_spoiler": _rate(rows, "audience_spoiler"),
+        "campaign_problems": _rate(rows, "forbidden_used")[0] + _rate(rows, "spoiler_leak")[0],
         "forbidden_used": _rate(rows, "forbidden_used"),
         "sample_size_correct": _rate(rows, "sample_size_correct"),
         "qa_false_block": _rate([r for r in rows if not (r.get("spoiler_leak") or r.get("forbidden_used"))], "qa_false_block"),

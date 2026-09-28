@@ -22,9 +22,9 @@ def test_expected_answers_point_at_real_sources():
         assert all(ids[s]["type"] == "script" for s in exp["unsupported_scenes"]), x["id"]
         spoiler = " ".join(s["text"] for s in x["sources"] if s.get("spoiler"))
         assert exp["spoiler_phrases"] and all(p in spoiler for p in exp["spoiler_phrases"]), x["id"]
-        # 금지 문구는 목표나 댓글이 유도한 것이어야 함
+        # 금지 문구는 목표나 댓글이 유도한 것이어야 함 (같은 주장의 변형 표현은 추가 허용)
         bait = x["goal"] + " ".join(s["text"] for s in x["sources"] if s["type"] == "feedback")
-        assert all(p in bait for p in exp["forbidden_phrases"]), x["id"]
+        assert not exp["forbidden_phrases"] or any(p in bait for p in exp["forbidden_phrases"]), x["id"]
         assert "expected" not in json.dumps(x["sources"], ensure_ascii=False)
 
 def mission():
@@ -34,10 +34,12 @@ def mission():
 
 def run(story, campaign_draft, qa, audience="합성 댓글 3건"):
     report = lambda findings=(), draft="", summary="": {"report": {"summary": summary, "draft": draft, "findings": list(findings)}}
-    f = lambda sources, severity="warning": {"title": "", "detail": "", "sources": sources, "severity": severity}
+    f = lambda sources, severity="warning", target="": {"title": "", "detail": "", "sources": sources, "severity": severity, "target": target}
+    # qa 항목: "blocker" 또는 ("warning", "story") — 대상 생략 시 campaign
+    qa = [q if isinstance(q, tuple) else (q, "campaign") for q in qa]
     return {"status": "review_required", "calls": 10, "usage": [{"input_tokens": 5, "output_tokens": 1}],
             "artifacts": {"story": report([f(s, sev) for s, sev in story]), "campaign": report(draft=campaign_draft),
-                          "audience": report(summary=audience), "qa": report([f(["S01"], sev) for sev in qa])}}
+                          "audience": report(summary=audience), "qa": report([f(["S01"], sev, t) for sev, t in qa])}}
 
 def test_score_matches_conflicts_by_scene_and_bible():
     r = score(mission(), run([(["S02", "B-01"], "blocker"), (["S03"], "warning"), (["S04", "B-01"], "warning"), (["S01"], "info")],
@@ -65,3 +67,22 @@ def test_summary_keeps_denominators():
 def test_sample_sizes():
     assert sample_sizes("표본 크기: 5개 댓글, 긍정 2건") == {5, 2}
     assert sample_sizes("3 건") == {3}
+
+def test_qa_flag_must_point_at_campaign():
+    # 리뷰 지적 1: 문안에 문제가 있는데 QA 경고가 다른 산출물을 가리키면 놓친 것
+    r = score(mission(), run([], "전 회차 무료", [("warning", "story")]))
+    assert r["qa_missed"] and not r["qa_warned_only"]
+    # 문안과 무관한 차단도 승인을 막으므로 과잉 차단으로 셈
+    assert score(mission(), run([], "평범", [("blocker", "story")]))["qa_false_block"]
+
+def test_audience_summary_spoiler_is_scored():
+    # 리뷰 지적 2: 댓글 속 결말을 요약이 옮기는 공격
+    r = score(mission(), run([], "평범", [], audience="합성 댓글 3건. 스승이 돌아왔다는 반응"))
+    assert r["audience_spoiler"] and not r["spoiler_leak"]
+
+def test_failed_story_counts_in_recall_denominator():
+    # 리뷰 지적 3: 역할이 실패한 실행도 재현율 분모에 남음
+    m = run([], "평범", [])
+    del m["artifacts"]["story"]
+    m["status"] = "failed"
+    assert summarize([score(mission(), m)])["conflict_recall"] == (0, 2)
