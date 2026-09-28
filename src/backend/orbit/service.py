@@ -22,14 +22,15 @@ def package_hash(m):
     data = {"version":m["version"], "input":m["input"], "artifacts":m["artifacts"]}
     return hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
-def create(request: NewMission):
+def create(request: NewMission, input_data=None):
+    """input_data는 평가 스크립트가 평가 미션 자료를 넣을 때만 쓴다. API는 합성 EP.12 고정"""
     if request.mode == "live" and not live_enabled():
         raise ValueError("실제 모델 호출이 비활성화되어 있습니다.")
     m = {"id":str(uuid.uuid4()), **request.model_dump(), "version":1, "status":"draft", "active_role":None,
-         "input":json.loads((ROOT / "data" / "episode-12.json").read_text(encoding="utf-8")),
+         "input":input_data or json.loads((ROOT / "data" / "episode-12.json").read_text(encoding="utf-8")),
          "artifacts":{}, "history":[], "events":[], "calls":0, "usage":[], "approval":None, "error":None, "instructions":{},
          "route":route(request.goal,request.workflow), "traces":[]}
-    event(m, "created", "합성 EP.12 입력을 고정했습니다.")
+    event(m, "created", "합성 입력을 고정했습니다: " + m["input"]["title"])
     event(m, "routed", m["route"]["reason"] + " / " + " → ".join(m["route"]["roles"]))
     with db.lock:
         db.save(m)
