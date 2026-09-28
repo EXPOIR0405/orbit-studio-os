@@ -45,7 +45,7 @@ type Mission = {
   error: string | null;
   artifacts: Record<string, { version: number; report: Report }>;
   events: { sequence: number; time: string; type: string; detail: string }[];
-  input: { sources: { id: string; text: string }[] };
+  input: { title?: string; sources: { id: string; text: string }[] };
   route: { roles: string[]; reason: string; workflow: string };
   traces: {
     id: string;
@@ -506,7 +506,7 @@ export default function Studio() {
               <section className="mission-banner">
                 <div className="mission-art">
                   <Orbit size={58} strokeWidth={1} />
-                  <span>EP.12</span>
+                  <span>{m?.input.title?.match(/EP\.\d+/)?.[0] ?? "EP.12"}</span>
                 </div>
                 <div className="mission-copy">
                   <div className="eyebrow">
