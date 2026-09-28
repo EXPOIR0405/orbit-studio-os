@@ -69,14 +69,25 @@ def test_failure_resume_does_not_repeat_success(monkeypatch):
         m=complete(c,m)
         assert m["status"]=="review_required" and m["calls"]==6
 
-def test_qa_warning_blocks_approval():
+def _set_qa_finding(mid,severity):
+    raw=db.get(mid)
+    raw["artifacts"]["qa"]["report"]["needs_review"]=True
+    raw["artifacts"]["qa"]["report"]["findings"]=[{"title":"t","detail":"d","sources":["S04"],"severity":severity,"target":"campaign","quote":"q"}]
+    db.save(raw)
+
+def test_qa_blocker_blocks_approval():
     with TestClient(app) as c:
         m=complete(c,mission(c))
-        raw=db.get(m["id"])
-        raw["artifacts"]["qa"]["report"]["needs_review"]=True
-        db.save(raw)
+        _set_qa_finding(m["id"],"blocker")
         m=c.get(f"/missions/{m['id']}").json()
         assert c.post(f"/missions/{m['id']}/approvals",json={"version":1,"package_hash":m["package_hash"]}).status_code==409
+
+def test_qa_warning_allows_approval():
+    with TestClient(app) as c:
+        m=complete(c,mission(c))
+        _set_qa_finding(m["id"],"warning")
+        m=c.get(f"/missions/{m['id']}").json()
+        assert c.post(f"/missions/{m['id']}/approvals",json={"version":1,"package_hash":m["package_hash"]}).status_code==200
 
 def test_restart_marks_inflight_failed():
     with TestClient(app) as c:
@@ -85,3 +96,34 @@ def test_restart_marks_inflight_failed():
     with TestClient(app) as c:
         m=c.get(f"/missions/{m['id']}").json()
         assert m["status"]=="failed" and m["calls"]==1
+
+def _missing_evidence(actual):
+    from orbit.models import Report, Finding
+    def generate(role,context,mode,tools,on_request,on_usage):
+        report=actual(role,context,mode,tools,on_request,on_usage)
+        if role=="campaign":
+            return Report(summary=report.summary,draft=report.draft,needs_review=False,
+                          findings=[Finding(title="근거 없음",detail="sources 누락",sources=[],severity="info")])
+        return report
+    return generate
+
+def test_evaluation_failure_is_repaired_once(monkeypatch):
+    with TestClient(app) as c:
+        m=mission(c)
+        monkeypatch.setattr(service,"generate",_missing_evidence(service.generate))
+        m=complete(c,m)
+        assert m["status"]=="review_required" and m["calls"]==6
+        trace=next(t for t in m["traces"] if t["role"]=="campaign")
+        assert trace["status"]=="completed"
+        assert trace["evaluation"]["repaired_from"]==["finding_evidence_present"]
+        assert [r["reason"] for r in trace["requests"]]==["deterministic_fixture","deterministic_fixture_repair"]
+
+def test_failed_repair_fails_mission(monkeypatch):
+    with TestClient(app) as c:
+        m=mission(c)
+        bad=_missing_evidence(service.generate)
+        monkeypatch.setattr(service,"generate",bad)
+        monkeypatch.setattr(service,"repair",lambda role,context,mode,report,failed,on_request,on_usage:(on_request("repair"),report)[1])
+        m=complete(c,m)
+        assert m["status"]=="failed" and "campaign" not in m["artifacts"]
+        assert next(t for t in m["traces"] if t["role"]=="campaign")["status"]=="failed"

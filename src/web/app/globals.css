@@ -529,6 +529,13 @@ h2 {
   color: #92819e;
   line-height: 1.8;
 }
+.finding-quote {
+  margin: 6px 0 8px;
+  padding: 6px 10px;
+  background: #f3eef9;
+  border-radius: 4px;
+  color: #756680;
+}
 .source-tags {
   display: flex;
   flex-wrap: wrap;

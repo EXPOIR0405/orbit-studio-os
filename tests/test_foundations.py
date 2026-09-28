@@ -70,3 +70,14 @@ def test_live_provider_guard_precedes_client(monkeypatch):
     monkeypatch.setattr(provider,'OpenAI',lambda **kw: pytest.fail('network client must not be constructed'))
     with pytest.raises(ValueError):
         provider.generate('pd',{},'live',None,None,None)
+
+def test_qa_quote_must_exist_in_target_artifact():
+    artifacts={'campaign':{'summary':'문안','draft':'1. 일요일 저녁,\n별빛식당의 온기','findings':[]}}
+    def qa(quote,target='campaign',severity='blocker'):
+        report=Report(summary='검수',draft='체크',needs_review=True,findings=[{'title':'스포일러','detail':'d','sources':['S06'],'severity':severity,'target':target,'quote':quote}])
+        return evaluate('qa',report,[{'id':'S06'}],artifacts)
+    assert qa('일요일 저녁, 별빛식당의 온기')['passed']
+    hallucinated=qa('마지막 손님은 스승이었다')
+    assert not hallucinated['gates']['qa_quotes_verified'] and hallucinated['unverified_quotes']==['스포일러']
+    assert not qa('일요일 저녁',target='story')['passed']
+    assert qa('',severity='info')['passed']

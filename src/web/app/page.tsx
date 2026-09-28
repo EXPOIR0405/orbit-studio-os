@@ -27,6 +27,8 @@ type Report = {
     detail: string;
     sources: string[];
     severity: string;
+    target?: string;
+    quote?: string;
   }[];
 };
 type Mission = {
@@ -180,8 +182,8 @@ export default function Studio() {
   const canApprove =
     m?.status === "review_required" &&
     qa &&
-    !qa.needs_review &&
-    !qa.findings.some((f) => ["warning", "blocker"].includes(f.severity));
+    !qa.findings.some((f) => f.severity === "blocker");
+  const qaWarnings = qa ? qa.findings.filter((f) => f.severity === "warning").length : 0;
   const activeTeam = team.filter((t) => !m || m.route.roles.includes(t.id));
   const nodes = activeTeam.map((t, i) => ({
     id: t.id,
@@ -634,6 +636,11 @@ export default function Studio() {
                         <div className="finding" key={i}>
                           <strong>{f.title}</strong>
                           <p>{f.detail}</p>
+                          {f.quote && (
+                            <blockquote className="finding-quote">
+                              {f.target} · “{f.quote}”
+                            </blockquote>
+                          )}
                           <div className="source-tags">
                             {f.sources.map((s) => (
                               <details key={s}>
@@ -741,7 +748,12 @@ export default function Studio() {
                           </button>
                           {!canApprove && (
                             <p className="muted">
-                              QA의 미해결 항목을 수정한 뒤 승인할 수 있습니다.
+                              QA 차단 항목을 수정한 뒤 승인할 수 있습니다.
+                            </p>
+                          )}
+                          {canApprove && qaWarnings > 0 && (
+                            <p className="muted">
+                              QA 경고 {qaWarnings}건을 확인한 뒤 승인하세요.
                             </p>
                           )}
                         </>

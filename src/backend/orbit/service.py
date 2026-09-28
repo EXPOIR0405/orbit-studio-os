@@ -8,7 +8,7 @@ from langgraph.graph import StateGraph, START, END
 from . import storage as db
 from .config import ROOT
 from .models import NewMission
-from .provider import generate, live_enabled
+from .provider import generate, repair, live_enabled
 from .routing import route
 from .tools import ToolBox
 from .evaluation import evaluate
@@ -79,8 +79,9 @@ def approve(mid, req):
         if m["status"] != "review_required" or req.version != m["version"] or req.package_hash != package_hash(m):
             raise ValueError("최신 검토 패키지만 승인할 수 있습니다.")
         qa = m["artifacts"].get("qa",{}).get("report",{})
-        if qa.get("needs_review",True) or any(f["severity"] in ["blocker","warning"] for f in qa.get("findings",[])):
-            raise ValueError("QA 미해결 항목을 수정한 뒤 승인하세요.")
+        # warning은 운영자가 확인하고 승인할 수 있다. 공개하면 안 되는 blocker만 승인을 막음
+        if not qa or any(f["severity"]=="blocker" for f in qa.get("findings",[])):
+            raise ValueError("QA 차단 항목을 수정한 뒤 승인하세요.")
         m["approval"] = {"package_hash":req.package_hash, "version":req.version, "actor":"local-operator"}
         m["status"] = "approved"
         event(m,"approved","운영자가 현재 패키지를 승인했습니다.")
@@ -157,7 +158,12 @@ def run_role(mid, role):
     toolbox=ToolBox(role,context["sources"],mid,m["input"]["version"],record_tool)
     try:
         report=generate(role,context,m["mode"],toolbox,reserve,record_usage)
-        evaluation=evaluate(role,report,context["sources"])
+        evaluation=evaluate(role,report,context["sources"],context["previous_results"])
+        if not evaluation["passed"]:
+            # 게이트에 걸리면 실패한 항목을 알려 주고 한 번만 다시 받는다. 호출 예산은 reserve가 그대로 검사
+            failed=[g for g,ok in evaluation["gates"].items() if not ok]
+            report=repair(role,context,m["mode"],report,failed,reserve,record_usage)
+            evaluation={**evaluate(role,report,context["sources"],context["previous_results"]),"repaired_from":failed}
         with db.lock:
             current=db.get(mid)
             trace=next(t for t in current["traces"] if t["id"]==trace_id)

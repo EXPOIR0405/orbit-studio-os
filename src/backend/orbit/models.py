@@ -8,6 +8,9 @@ class Finding(BaseModel):
     detail: str
     sources: list[str]
     severity: Literal["info", "warning", "blocker"]
+    # QA가 warning·blocker를 달 때만 채운다. quote가 target 산출물에 실제로 있는지 evaluation이 코드로 확인
+    target: str = Field(default="", description="QA의 warning·blocker가 가리키는 산출물 역할(story/audience/campaign). 그 외에는 빈 문자열")
+    quote: str = Field(default="", description="target 산출물에서 문제 문장을 글자 그대로 인용. 그 외에는 빈 문자열")
 
 class Report(BaseModel):
     summary: str
